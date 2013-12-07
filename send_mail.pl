@@ -8,11 +8,11 @@ use Mail::Sendmail;
 my %mail = (
 	server	=> 'smtp.xxxxxxx.com:25',
 	auth    => {user => 'char6ming@xxxxxxx.com', password => '', method => 'LOGIN', required => 1},
-	From	=> 'caolm@xxxxxxx.com',
+	From	=> 'char6ming@xxxxxxx.com',
 );
 
-$mail{To} = 'someone@xxxxxxx.com,caolm@xxxxxxx.com';
-$mail{Cc} = 'someone@xxxxxxx.com,caolm@xxxxxxx.com';
+$mail{To} = 'someone@xxxxxxx.com,char6ming@xxxxxxx.com';
+$mail{Cc} = 'someone@xxxxxxx.com,char6ming@xxxxxxx.com';
 
 $mail{Subject} = shift @ARGV;
 
