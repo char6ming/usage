@@ -14,14 +14,19 @@ my $host = $query->param ("ip");
 my $port = $query->param ("port");
 my $filename = $query->param ("photo");
 my $xml_data = $query->param ("xml_data");
+# do insure: 0 or 1
+my $want_land_data = 0;
 
 my $upload_filehandle = $query->upload ("photo");
+
+# CONVENTION: #@land_data means land the result data.
+$host =~ s/\#\@land_data// and $want_land_data = 1;
 
 $host =~ /^(?:\d{1,3}\.){3}\d{1,3}$/m or show_err_msg ("IP is NOT legal.");
 $port =~ /^\d+$/m or show_err_msg ("PORT is NOT legal.");
 
-# Forbid anyone to access the online host ^_^
-'xxx.xxx.xxx.xxxx' eq $host and show_err_msg ("Forbid anyone to access the online host ^_^");
+# Forbid anyone to access host ^_^
+'xxx.xxx.xxx.xxxx' eq $host and show_err_msg ("Forbid anyone to access $host ^_^");
 
 my $img_data = '';
 
@@ -79,11 +84,13 @@ sub wrap {
 	my ($header, $send_data) = ();
 	my $img_sum = 0;
 	defined $img and defined $img_name and $img_len > 0 and $img_name_len > 0 and $img_sum = 1;
-	$header = pack ("a8i", 'XXXXXX.0', 30 + $xml_len + (1 == $img_sum ? $img_len + $img_name_len + 8: 0));
+	$header = pack ("a8i", 'XXXXXX.0', 30 + $xml_len + (1 == $img_sum ? $img_len + $img_name_len + 8 : 0) + (1 == $want_land_data ? 20 : 0));
 	if (1 == $img_sum) {
-	  $send_data = pack ("sa16ss i a$xml_len i ia$img_name_len i a$img_len", 1, '', 6, 0, $xml_len, $xml, 1, $img_name_len, $img_name, $img_len, $img);
+	  1 == $want_land_data and $send_data = pack ("sa16ss a16 i i a$xml_len i ia$img_name_len i a$img_len", 1, '', 6, 1, $host, 8888, $xml_len, $xml, 1, $img_name_len, $img_name, $img_len, $img);
+	  0 == $want_land_data and $send_data = pack ("sa16ss i a$xml_len i ia$img_name_len i a$img_len", 1, '', 6, 0, $xml_len, $xml, 1, $img_name_len, $img_name, $img_len, $img);
 	} else {
-	  $send_data = pack ("sa16ss i a$xml_len i", 1, '', 6, 0, $xml_len, $xml, 0);
+	  1 == $want_land_data and $send_data = pack ("sa16ss a16 i i a$xml_len i", 1, '', 6, 1, $host, 8888, $xml_len, $xml, 0);
+	  0 == $want_land_data and $send_data = pack ("sa16ss i a$xml_len i", 1, '', 6, 0, $xml_len, $xml, 0);
 	}
 	
 	return ($header, $send_data); 
@@ -126,7 +133,7 @@ __END__
 		<form action="/cgi-bin/query_proc_result.pl" method="post" enctype="multipart/form-data">
 			<p>&nbsp;ip&nbsp;: <input type="text" name="ip"  onmouseover="tooltip.pop(this, '<h3>IP / PORT 对应哪套系统？</h3>xxx.xxx.xxx.xxx:xxxx是测试系统</br> xxx.xxx.xxx.xxx:xxxx是测试系统2</br><h4>注意：</h4>不要企图使用线上的系统测试数据，我已经把IP过滤了 ^_^')" ></p>
 			<p>port: <input type="text" name="port" onmouseover="tooltip.pop(this, ''<h3>IP / PORT 对应哪套系统？</h3>xxx.xxx.xxx.xxx:xxxx是测试系统</br> xxx.xxx.xxx.xxx:xxxx是测试系统2</br><h4>注意：</h4>不要企图使用线上的系统测试数据，我已经把IP过滤了 ^_^')" ></p>
-			<p><br>want to proc xml: <br><textarea name="xml_data" rows="20" cols="80"  onmouseover="tooltip.pop(this, '<h3>用前必读，否则我保证你输入的数据处理不了：</h3>为了方便调试，上面数据1；下面是数据2。切记每次只能输入一个数据。为了调试数据的某个字段你可以删除一个数据，在剩下的一条数据的基础上修改字段。或者用xxx的工具查询采集的原始数据，过滤掉一些非法字符（我一般只用一条正则表达式s#>\s+?<#><\#处理）后，copy到这里测试。另外需要注意的是：图片数据如果没有，src_data字段的data删除，或者选择上传本地的小图片，但别忘记src_data字段的data就是本地上传图片的文件名。<h4>注意：</h4>如果提供错误数据，处理失败会输出一个query_proc_result.pl文件，下载到本地')">
+			<p><br>want to proc xml: <br><textarea name="xml_data" rows="20" cols="80"  onmouseover="tooltip.pop(this, '<h3>用前必读，否则我保证你输入的数据处理不了：</h3>为了方便调试，上面数据1；下面是数据2。切记每次只能输入一个数据。为了调试数据的某个字段你可以删除一个数据，在剩下的一条数据的基础上修改字段。或者用xxx的工具查询采集的原始数据，过滤掉一些非法字符（我一般只用一条正则表达式s#>\s+?<#><\#处理）后，copy到这里测试。另外需要注意的是：图片数据如果没有，data字段的data删除，或者选择上传本地的小图片，但别忘记data字段的data就是本地上传图片的文件名。<h4>注意：</h4>如果提供错误数据，处理失败会输出一个query_proc_result.pl文件，下载到本地')">
 
 				</textarea></p>
 			<p>src data img upload: <input type="file" name="photo"  onmouseover="tooltip.pop(this, 'Note: MUST modify the *data* value if you choose upload a picture.')" /></p><br>
